@@ -1,0 +1,22 @@
+[Unit]
+Description=Guardian AI Attack Forecasting Engine
+Documentation=https://github.com/your-org/guardian
+After=network.target wazuh-manager.service wazuh-indexer.service
+Wants=wazuh-manager.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/guardian
+ExecStart=/usr/bin/python3 /guardian/guardian_live.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=guardian-ai
+
+# Make sure it restarts if it crashes
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target

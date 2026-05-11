@@ -1,0 +1,46 @@
+<!-- 
+  guardian_rules.xml
+  ==================
+  Custom Wazuh rules for Guardian AI predictions.
+  
+  Place this file at:
+    /var/ossec/etc/rules/guardian_rules.xml
+  
+  These rules tell Wazuh how to display AI predictions in the dashboard.
+  Each rule has a level that controls the alert color and priority.
+-->
+
+<group name="guardian_ai,ml_prediction,">
+
+  <!-- Base rule: any Guardian AI alert -->
+  <rule id="100001" level="3">
+    <field name="guardian_ai.risk_level">NORMAL</field>
+    <description>Guardian AI: No threat detected — system normal</description>
+    <group>guardian_ai,normal,</group>
+  </rule>
+
+  <rule id="100002" level="5">
+    <field name="guardian_ai.risk_level">LOW</field>
+    <description>Guardian AI: Low risk — weak signals detected</description>
+    <group>guardian_ai,low_risk,</group>
+  </rule>
+
+  <rule id="100003" level="8">
+    <field name="guardian_ai.risk_level">ELEVATED</field>
+    <description>Guardian AI [ELEVATED] — $(guardian_ai.attack_prediction) signals detected. ETA: $(guardian_ai.estimated_time_to_attack)</description>
+    <group>guardian_ai,elevated_risk,</group>
+  </rule>
+
+  <rule id="100004" level="11">
+    <field name="guardian_ai.risk_level">HIGH</field>
+    <description>Guardian AI [HIGH RISK] — $(guardian_ai.attack_prediction) predicted. ETA: $(guardian_ai.estimated_time_to_attack). Action: $(guardian_ai.recommendation)</description>
+    <group>guardian_ai,high_risk,</group>
+  </rule>
+
+  <rule id="100005" level="14">
+    <field name="guardian_ai.risk_level">CRITICAL</field>
+    <description>Guardian AI [CRITICAL] — $(guardian_ai.attack_prediction) IMMINENT. ETA: $(guardian_ai.estimated_time_to_attack). IMMEDIATE ACTION REQUIRED.</description>
+    <group>guardian_ai,critical,</group>
+  </rule>
+
+</group>
