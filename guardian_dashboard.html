@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUARDIAN AI — Attack Forecasting Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg:        #020810;
+    --panel:     #050f1a;
+    --border:    #0a2440;
+    --accent:    #00d4ff;
+    --green:     #00ff88;
+    --yellow:    #ffd200;
+    --orange:    #ff6b00;
+    --red:       #ff1744;
+    --dim:       #1a3a5c;
+    --text:      #c8e0f4;
+    --muted:     #4a7090;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scan line effect */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -100%;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: linear-gradient(transparent, rgba(0,212,255,0.02), transparent);
+    animation: scan 8s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes scan {
+    0%   { top: -200px; }
+    100% { top: 100vh; }
+  }
+
+  .everything { position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.05) 0%, transparent 100%);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3), inset 0 0 20px rgba(0,212,255,0.05);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,212,255,0.3), inset 0 0 20px rgba(0,212,255,0.05); }
+    50%       { box-shadow: 0 0 40px rgba(0,212,255,0.6), inset 0 0 20px rgba(0,212,255,0.1); }
+  }
+
+  .logo-text h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+  }
+
+  .logo-text p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
+  }
+
+  .clock {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .refresh-btn:hover {
+    background: rgba(0,212,255,0.1);
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    background: var(--panel);
+    padding: 20px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+
+  .stat-card.danger::before  { background: var(--red); }
+  .stat-card.warning::before { background: var(--orange); }
+  .stat-card.caution::before { background: var(--yellow); }
+  .stat-card.ok::before      { background: var(--green); }
+
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-card.danger  .stat-value  { color: var(--red);    text-shadow: 0 0 20px rgba(255,23,68,0.5); }
+  .stat-card.warning .stat-value  { color: var(--orange);  text-shadow: 0 0 20px rgba(255,107,0,0.5); }
+  .stat-card.caution .stat-value  { color: var(--yellow);  text-shadow: 0 0 20px rgba(255,210,0,0.5); }
+  .stat-card.ok      .stat-value  { color: var(--green);   text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 0;
+    min-height: calc(100vh - 160px);
+  }
+
+  .left-panel { border-right: 1px solid var(--border); }
+  .right-panel { }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,212,255,0.02);
+  }
+
+  .section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .section-count {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── PREDICTION CARDS ── */
+  .predictions-list {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+  }
+
+  .predictions-list::-webkit-scrollbar { width: 4px; }
+  .predictions-list::-webkit-scrollbar-track { background: var(--bg); }
+  .predictions-list::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+  .pred-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pred-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+
+  .pred-card.CRITICAL::before { background: var(--red);    }
+  .pred-card.HIGH::before     { background: var(--orange); }
+  .pred-card.ELEVATED::before { background: var(--yellow); }
+  .pred-card.LOW::before      { background: #4488ff;       }
+  .pred-card.NORMAL::before   { background: var(--green);  }
+
+  .pred-card:hover {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+    transform: translateX(2px);
+  }
+
+  .pred-card.active {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.06);
+  }
+
+  .pred-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .pred-risk {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .risk-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+  }
+
+  .CRITICAL .risk-badge { color: var(--red);    border-color: var(--red);    background: rgba(255,23,68,0.1);  }
+  .HIGH     .risk-badge { color: var(--orange); border-color: var(--orange); background: rgba(255,107,0,0.1); }
+  .ELEVATED .risk-badge { color: var(--yellow); border-color: var(--yellow); background: rgba(255,210,0,0.1); }
+  .LOW      .risk-badge { color: #4488ff;       border-color: #4488ff;       background: rgba(68,136,255,0.1);}
+  .NORMAL   .risk-badge { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.1); }
+
+  .pred-time {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .pred-type {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+
+  .pred-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .pred-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    padding: 20px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-track { background: var(--bg); }
+  .detail-panel::-webkit-scrollbar-thumb { background: var(--dim); }
+
+  .detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--muted);
+    text-align: center;
+    gap: 12px;
+  }
+
+  .detail-empty .icon { font-size: 40px; opacity: 0.3; }
+  .detail-empty p { font-size: 13px; letter-spacing: 1px; }
+
+  .detail-risk-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-risk-icon {
+    font-size: 32px;
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+  }
+
+  .detail-risk-text h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .detail-risk-text p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .detail-section {
+    margin-bottom: 18px;
+  }
+
+  .detail-section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(10,36,64,0.5);
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-row-label {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  .detail-row-value {
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .prob-bar-wrap {
+    margin: 6px 0 12px;
+  }
+
+  .prob-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+
+  .prob-label .name { color: var(--muted); font-weight: 500; }
+  .prob-label .val  { color: var(--accent); font-family: 'Share Tech Mono', monospace; }
+
+  .prob-bar {
+    height: 4px;
+    background: var(--dim);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prob-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), rgba(0,212,255,0.5));
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  .evidence-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 0;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(10,36,64,0.5);
+    line-height: 1.4;
+  }
+
+  .evidence-item:last-child { border-bottom: none; }
+  .evidence-dot { color: var(--accent); font-size: 10px; margin-top: 2px; flex-shrink: 0; }
+
+  .anomaly-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 0;
+    font-size: 12px;
+    color: var(--yellow);
+    border-bottom: 1px solid rgba(10,36,64,0.5);
+    line-height: 1.4;
+  }
+
+  .anomaly-item:last-child { border-bottom: none; }
+
+  .recommendation-box {
+    background: rgba(0,212,255,0.04);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .recommendation-box.CRITICAL { border-color: rgba(255,23,68,0.3);  background: rgba(255,23,68,0.05); }
+  .recommendation-box.HIGH     { border-color: rgba(255,107,0,0.3); background: rgba(255,107,0,0.05); }
+  .recommendation-box.ELEVATED { border-color: rgba(255,210,0,0.3); background: rgba(255,210,0,0.05); }
+
+  .stage-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+
+  .stage-pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .stage-pill.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.1);
+    box-shadow: 0 0 10px rgba(0,212,255,0.2);
+  }
+
+  .stage-arrow { color: var(--muted); font-size: 10px; }
+
+  /* ── NO DATA ── */
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    gap: 16px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .no-data .big-icon { font-size: 60px; opacity: 0.15; }
+
+  .no-data h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  .no-data p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    max-width: 320px;
+    line-height: 1.6;
+  }
+
+  .no-data code {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--accent);
+    display: block;
+    margin-top: 8px;
+  }
+
+  /* ── LOADING ── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 12px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--dim);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── FILE INPUT ── */
+  .file-input-section {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .file-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .file-input {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .file-input:hover { border-color: var(--accent); }
+
+  .file-path-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+
+  /* ── CONFIDENCE METER ── */
+  .conf-meter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .conf-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--dim);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .conf-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+  }
+
+  .conf-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 50px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+<div class="everything">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">
+      <h1>GUARDIAN</h1>
+      <p>AI ATTACK FORECASTING SYSTEM · WAZUH INTEGRATION</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      AI ENGINE ACTIVE
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+    <button class="refresh-btn" onclick="loadData()">⟳ REFRESH</button>
+  </div>
+</header>
+
+<!-- FILE INPUT -->
+<div class="file-input-section">
+  <span class="file-label">PREDICTIONS FILE :</span>
+  <input type="file" class="file-input" id="fileInput" accept=".json,.txt"
+         onchange="handleFileLoad(this)">
+  <span class="file-path-display" id="filePath">
+    Upload guardian_predictions.json from your Ubuntu machine
+  </span>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="stat-card" id="statTotal">
+    <div class="stat-label">TOTAL PREDICTIONS</div>
+    <div class="stat-value" id="valTotal">—</div>
+    <div class="stat-sub">All time</div>
+  </div>
+  <div class="stat-card danger" id="statCritical">
+    <div class="stat-label">CRITICAL / HIGH</div>
+    <div class="stat-value" id="valCritical">—</div>
+    <div class="stat-sub">Immediate action required</div>
+  </div>
+  <div class="stat-card caution" id="statElevated">
+    <div class="stat-label">ELEVATED</div>
+    <div class="stat-value" id="valElevated">—</div>
+    <div class="stat-sub">Monitor closely</div>
+  </div>
+  <div class="stat-card ok" id="statNormal">
+    <div class="stat-label">NORMAL / LOW</div>
+    <div class="stat-value" id="valNormal">—</div>
+    <div class="stat-sub">Routine monitoring</div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT: Predictions list -->
+  <div class="left-panel">
+    <div class="section-header">
+      <span class="section-title">⬡ PREDICTION FEED</span>
+      <span class="section-count" id="predCount">— records</span>
+    </div>
+    <div class="predictions-list" id="predList">
+      <div class="no-data">
+        <div class="big-icon">📡</div>
+        <h3>NO DATA LOADED</h3>
+        <p>Upload your Guardian AI predictions file to view results.</p>
+        <p style="margin-top:8px">On Ubuntu, copy the file to your machine:</p>
+        <code>scp alaa@192.168.253.157:/var/ossec/logs/alerts/guardian_predictions.json .</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Detail panel -->
+  <div class="right-panel">
+    <div class="section-header">
+      <span class="section-title">⬡ PREDICTION DETAIL</span>
+    </div>
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-empty">
+        <div class="icon">🔍</div>
+        <p>SELECT A PREDICTION<br>TO VIEW DETAILS</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// ── Clock ──────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-GB', {hour12: false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── State ──────────────────────────────────────────────────────────
+let allPredictions = [];
+let selectedIdx    = -1;
+
+// ── Load file ──────────────────────────────────────────────────────
+function handleFileLoad(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  document.getElementById('filePath').textContent = '⟳ Loading ' + file.name + '...';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    parseAndRender(text, file.name);
+  };
+  reader.readAsText(file);
+}
+
+function parseAndRender(text, filename) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const preds = [];
+
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (obj.guardian_ai) preds.push(obj);
+    } catch(e) {}
+  }
+
+  // Sort newest first
+  preds.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  allPredictions = preds;
+
+  document.getElementById('filePath').textContent =
+    '✓ ' + filename + ' — ' + preds.length + ' predictions loaded';
+
+  renderStats();
+  renderList();
+  if (preds.length > 0) showDetail(0);
+}
+
+// ── Stats ──────────────────────────────────────────────────────────
+function renderStats() {
+  const total    = allPredictions.length;
+  const critical = allPredictions.filter(p =>
+    ['CRITICAL','HIGH'].includes(p.guardian_ai?.risk_level)).length;
+  const elevated = allPredictions.filter(p =>
+    p.guardian_ai?.risk_level === 'ELEVATED').length;
+  const normal   = allPredictions.filter(p =>
+    ['NORMAL','LOW'].includes(p.guardian_ai?.risk_level)).length;
+
+  document.getElementById('valTotal').textContent    = total;
+  document.getElementById('valCritical').textContent = critical;
+  document.getElementById('valElevated').textContent = elevated;
+  document.getElementById('valNormal').textContent   = normal;
+}
+
+// ── Prediction list ────────────────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('predList');
+  if (!allPredictions.length) {
+    list.innerHTML = `<div class="no-data">
+      <div class="big-icon">📡</div>
+      <h3>NO PREDICTIONS FOUND</h3>
+      <p>The file was loaded but contains no Guardian AI predictions.</p>
+    </div>`;
+    document.getElementById('predCount').textContent = '0 records';
+    return;
+  }
+
+  document.getElementById('predCount').textContent = allPredictions.length + ' records';
+
+  list.innerHTML = allPredictions.map((p, i) => {
+    const ai   = p.guardian_ai || {};
+    const risk = ai.risk_level || 'UNKNOWN';
+    const type = (ai.attack_prediction || 'unknown').toUpperCase().replace(/_/g,' ');
+    const prob = ai.attack_probability || ai.attack_probability_pct || '—';
+    const eta  = ai.estimated_time_to_attack || '—';
+    const ts   = formatTime(p.timestamp);
+    const emoji = riskEmoji(risk);
+
+    return `<div class="pred-card ${risk} ${i === selectedIdx ? 'active' : ''}"
+                 onclick="showDetail(${i})">
+      <div class="pred-top">
+        <div class="pred-risk">
+          <span class="risk-badge">${emoji} ${risk}</span>
+        </div>
+        <span class="pred-time">${ts}</span>
+      </div>
+      <div class="pred-type">${type}</div>
+      <div class="pred-meta">
+        <span>📊 ${prob}</span>
+        <span>⏱ ${eta}</span>
+        <span>🎯 ${ai.confidence || '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Detail panel ───────────────────────────────────────────────────
+function showDetail(idx) {
+  selectedIdx = idx;
+  renderList(); // re-render to update active state
+
+  const p  = allPredictions[idx];
+  const ai = p.guardian_ai || {};
+  const risk = ai.risk_level || 'NORMAL';
+  const emoji = riskEmoji(risk);
+
+  const killChainStages = ['recon','initial_access','exploitation','post_compromise','impact'];
+  const currentStage = ai.attack_stage || 'none';
+
+  const stageFlow = killChainStages.map((s, i) => {
+    const isActive = s === currentStage;
+    const arrow = i < killChainStages.length - 1 ? '<span class="stage-arrow">›</span>' : '';
+    return `<span class="stage-pill ${isActive ? 'active' : ''}">${s.replace('_',' ')}</span>${arrow}`;
+  }).join('');
+
+  // Top classes
+  const topClasses = ai.top_classes || ai.top_attack_classes || {};
+  const classHtml = Object.entries(topClasses).map(([name, val]) => {
+    const pct = parseFloat(val) || 0;
+    return `<div class="prob-bar-wrap">
+      <div class="prob-label">
+        <span class="name">${name.replace(/_/g,' ').toUpperCase()}</span>
+        <span class="val">${val}</span>
+      </div>
+      <div class="prob-bar">
+        <div class="prob-fill" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Evidence
+  const evidence = (ai.evidence_signals || ai.evidence || []);
+  const evidenceHtml = evidence.length
+    ? evidence.map(e => `<div class="evidence-item">
+        <span class="evidence-dot">◆</span>${e}
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:8px 0">No strong signals detected</div>';
+
+  // Anomalies
+  const anomalies = (ai.behavioral_anomalies || ai.anomalies || []);
+  const anomalyHtml = anomalies.length
+    ? anomalies.map(a => `<div class="anomaly-item">⚠ ${a}</div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:8px 0">No behavioral anomalies</div>';
+
+  // Confidence score
+  const confScore = ai.confidence_score || 0;
+  const confPct   = Math.round(confScore * 100);
+
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="detail-risk-header">
+      <div class="detail-risk-icon">${emoji}</div>
+      <div class="detail-risk-text">
+        <h2 class="${risk}" style="color:${riskColor(risk)}">${risk} RISK</h2>
+        <p>${formatTime(p.timestamp)}</p>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">PREDICTION</div>
+      <div class="detail-row">
+        <span class="detail-row-label">Attack Type</span>
+        <span class="detail-row-value" style="color:${riskColor(risk)}">
+          ${(ai.attack_prediction||'—').toUpperCase().replace(/_/g,' ')}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Probability</span>
+        <span class="detail-row-value">${ai.attack_probability || ai.attack_probability_pct || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Anomaly Risk</span>
+        <span class="detail-row-value">${ai.unknown_anomaly_risk || ai.unknown_anomaly_risk_pct || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Est. Time to Attack</span>
+        <span class="detail-row-value" style="color:${riskColor(risk)}">${ai.estimated_time_to_attack || '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Confidence</span>
+        <span class="detail-row-value">${ai.confidence || '—'}</span>
+      </div>
+      ${confScore ? `<div class="conf-meter">
+        <div class="conf-bar"><div class="conf-fill" style="width:${confPct}%"></div></div>
+        <span class="conf-label">${confPct}%</span>
+      </div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">KILL-CHAIN STAGE</div>
+      <div class="stage-flow">${stageFlow}</div>
+      ${ai.next_expected_stage && ai.next_expected_stage !== 'none'
+        ? `<div style="font-size:12px;color:var(--yellow);margin-top:8px">
+             ⟶ Next expected: ${ai.next_expected_stage.replace('_',' ').toUpperCase()}
+           </div>` : ''}
+    </div>
+
+    ${classHtml ? `<div class="detail-section">
+      <div class="detail-section-title">ATTACK CLASS PROBABILITIES</div>
+      ${classHtml}
+    </div>` : ''}
+
+    <div class="detail-section">
+      <div class="detail-section-title">EVIDENCE SIGNALS</div>
+      ${evidenceHtml}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">BEHAVIORAL ANOMALIES</div>
+      ${anomalyHtml}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">RECOMMENDATION</div>
+      <div class="recommendation-box ${risk}">
+        ${ai.recommendation || '—'}
+      </div>
+    </div>
+  `;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────
+function riskEmoji(risk) {
+  return {CRITICAL:'🔴',HIGH:'🟠',ELEVATED:'🟡',LOW:'🔵',NORMAL:'🟢'}[risk] || '⚪';
+}
+
+function riskColor(risk) {
+  return {
+    CRITICAL: '#ff1744',
+    HIGH:     '#ff6b00',
+    ELEVATED: '#ffd200',
+    LOW:      '#4488ff',
+    NORMAL:   '#00ff88',
+  }[risk] || '#c8e0f4';
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString('en-GB', {
+      day:'2-digit', month:'short',
+      hour:'2-digit', minute:'2-digit', second:'2-digit',
+      hour12: false,
+    });
+  } catch(e) { return ts; }
+}
+
+function loadData() {
+  const fi = document.getElementById('fileInput');
+  if (fi.files[0]) {
+    handleFileLoad(fi);
+  } else {
+    document.getElementById('filePath').textContent =
+      '↑ Upload guardian_predictions.json using the button above';
+  }
+}
+</script>
+</body>
+</html>
